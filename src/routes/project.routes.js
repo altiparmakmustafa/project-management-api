@@ -7,6 +7,7 @@ const {
   updateProject,
   deleteProject,
   addMember,
+  updateMemberRole,
   removeMember,
 } = require('../controllers/project.controller');
 const {
@@ -77,6 +78,18 @@ const addMemberRules = [
     .optional()
     .isMongoId()
     .withMessage('Geçerli bir Kullanıcı ID giriniz'),
+  body('role')
+    .optional()
+    .isIn(['admin', 'member', 'viewer'])
+    .withMessage("Rol 'admin', 'member' veya 'viewer' olmalıdır"),
+];
+
+const updateMemberRoleRules = [
+  body('role')
+    .notEmpty()
+    .withMessage('Rol alanı zorunludur')
+    .isIn(['admin', 'member', 'viewer'])
+    .withMessage("Rol 'admin', 'member' veya 'viewer' olmalıdır"),
 ];
 
 const createTaskRules = [
@@ -278,6 +291,51 @@ router.delete('/:id', deleteProject);
  *         description: Üye eklendi
  */
 router.post('/:id/members', addMemberRules, validate, addMember);
+
+/**
+ * @swagger
+ * /projects/{id}/members/{userId}/role:
+ *   put:
+ *     summary: Projedeki bir üyenin rolünü günceller (admin, member, viewer)
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - role
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [admin, member, viewer]
+ *                 example: viewer
+ *     responses:
+ *       200:
+ *         description: Üye rolü güncellendi
+ *       403:
+ *         description: Yetkisiz işlem (Sadece sahip veya proje yöneticisi)
+ */
+router.put(
+  '/:id/members/:userId/role',
+  updateMemberRoleRules,
+  validate,
+  updateMemberRole
+);
 
 /**
  * @swagger

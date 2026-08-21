@@ -2,6 +2,7 @@ const express = require('express');
 const authRoutes = require('./auth.routes');
 const projectRoutes = require('./project.routes');
 const taskRoutes = require('./task.routes');
+const userRoutes = require('./user.routes');
 const ApiResponse = require('../utils/apiResponse');
 
 const router = express.Router();
@@ -25,5 +26,6 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/projects', projectRoutes);
 router.use('/tasks', taskRoutes);
+router.use('/users', userRoutes);
 
 module.exports = router;

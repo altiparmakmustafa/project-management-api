@@ -1,5 +1,28 @@
 const mongoose = require('mongoose');
 
+const memberSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    role: {
+      type: String,
+      enum: {
+        values: ['admin', 'member', 'viewer'],
+        message: "Rol 'admin', 'member' veya 'viewer' olmalıdır",
+      },
+      default: 'member',
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
 const projectSchema = new mongoose.Schema(
   {
     title: {
@@ -19,12 +42,7 @@ const projectSchema = new mongoose.Schema(
       ref: 'User',
       required: [true, 'Proje sahibi zorunludur'],
     },
-    members: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-      },
-    ],
+    members: [memberSchema],
     status: {
       type: String,
       enum: ['active', 'archived', 'completed'],
@@ -32,7 +50,7 @@ const projectSchema = new mongoose.Schema(
     },
     color: {
       type: String,
-      default: '#3b82f6', // Varsayılan mavi renk kodu
+      default: '#3b82f6', // Varsayılan mavi renk
     },
   },
   {
@@ -48,7 +66,7 @@ const projectSchema = new mongoose.Schema(
   }
 );
 
-// Projeye ait görevlerin sanal (virtual) ilişkisi
+// Projeye ait görevlerin sanal ilişkisi
 projectSchema.virtual('tasks', {
   ref: 'Task',
   localField: '_id',

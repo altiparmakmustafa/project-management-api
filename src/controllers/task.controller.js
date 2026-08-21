@@ -6,40 +6,53 @@ const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 
-// Yardımcı: Kullanıcının projeye erişim yetkisini kontrol eder
-const checkProjectAccess = async (projectId, userId) => {
+// Yardımcı: Kullanıcının projedeki rolünü bulur ve yetkisini doğrular
+const checkProjectAccess = async (projectId, userId, requireWriteAccess = false) => {
   const project = await Project.findById(projectId);
   if (!project) {
     throw new ApiError(404, 'Proje bulunamadı.');
   }
 
-  const isMember =
-    project.owner.toString() === userId.toString() ||
-    project.members.some((m) => m.toString() === userId.toString());
+  let role = null;
+  if (project.owner.toString() === userId.toString()) {
+    role = 'owner';
+  } else {
+    const member = project.members.find(
+      (m) => m.user.toString() === userId.toString()
+    );
+    if (member) {
+      role = member.role;
+    }
+  }
 
-  if (!isMember) {
+  if (!role) {
     throw new ApiError(403, 'Bu projenin görevlerine erişim yetkiniz bulunmamaktadır.');
   }
 
-  return project;
+  // Eğer yazma/güncelleme yetkisi gerekiyorsa ve kullanıcı 'viewer' ise engelle
+  if (requireWriteAccess && role === 'viewer') {
+    throw new ApiError(403, 'İzleyici (viewer) rolündeki üyeler görevler üzerinde değişiklik yapamaz.');
+  }
+
+  return { project, role };
 };
 
 /**
  * @desc    Projeye yeni bir görev ekler
  * @route   POST /api/v1/projects/:projectId/tasks
- * @access  Private (Proje Üyeleri)
+ * @access  Private (Owner, Admin, Member)
  */
 const createTask = asyncHandler(async (req, res) => {
   const { projectId } = req.params;
   const { title, description, status, priority, assignee, tags, dueDate } = req.body;
 
-  const project = await checkProjectAccess(projectId, req.user._id);
+  const { project } = await checkProjectAccess(projectId, req.user._id, true);
 
-  // Eğer atanan kişi (assignee) belirtilmişse, o kişinin proje üyesi olduğunu doğrula
+  // Eğer atanan kişi belirtilmişse, o kişinin proje üyesi olduğunu doğrula
   if (assignee) {
     const isAssigneeMember =
       project.owner.toString() === assignee.toString() ||
-      project.members.some((m) => m.toString() === assignee.toString());
+      project.members.some((m) => m.user.toString() === assignee.toString());
 
     if (!isAssigneeMember) {
       throw new ApiError(400, 'Görev yalnızca proje üyelerine atanabilir.');
@@ -70,13 +83,13 @@ const createTask = asyncHandler(async (req, res) => {
 /**
  * @desc    Bir projenin görevlerini filtrelerle listeler
  * @route   GET /api/v1/projects/:projectId/tasks
- * @access  Private
+ * @access  Private (Owner, Admin, Member, Viewer)
  */
 const getTasksByProject = asyncHandler(async (req, res) => {
   const { projectId } = req.params;
   const { status, priority, assignee, tag, search } = req.query;
 
-  await checkProjectAccess(projectId, req.user._id);
+  await checkProjectAccess(projectId, req.user._id, false);
 
   const filter = { project: projectId };
 
@@ -104,7 +117,7 @@ const getTasksByProject = asyncHandler(async (req, res) => {
 /**
  * @desc    Tek bir görevin detaylarını getirir
  * @route   GET /api/v1/tasks/:id
- * @access  Private
+ * @access  Private (Owner, Admin, Member, Viewer)
  */
 const getTaskById = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -118,7 +131,7 @@ const getTaskById = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Görev bulunamadı.');
   }
 
-  await checkProjectAccess(task.project._id, req.user._id);
+  await checkProjectAccess(task.project._id, req.user._id, false);
 
   res.status(200).json(
     new ApiResponse(200, task, 'Görev detayları getirildi')
@@ -128,7 +141,7 @@ const getTaskById = asyncHandler(async (req, res) => {
 /**
  * @desc    Görevi günceller
  * @route   PUT /api/v1/tasks/:id
- * @access  Private
+ * @access  Private (Owner, Admin, Member)
  */
 const updateTask = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -139,13 +152,13 @@ const updateTask = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Görev bulunamadı.');
   }
 
-  const project = await checkProjectAccess(task.project, req.user._id);
+  const { project } = await checkProjectAccess(task.project, req.user._id, true);
 
   if (assignee !== undefined) {
     if (assignee) {
       const isAssigneeMember =
         project.owner.toString() === assignee.toString() ||
-        project.members.some((m) => m.toString() === assignee.toString());
+        project.members.some((m) => m.user.toString() === assignee.toString());
 
       if (!isAssigneeMember) {
         throw new ApiError(400, 'Görev yalnızca proje üyelerine atanabilir.');
@@ -176,7 +189,7 @@ const updateTask = asyncHandler(async (req, res) => {
 /**
  * @desc    Görevin durumunu hızlıca değiştirir (todo / in-progress / done)
  * @route   PATCH /api/v1/tasks/:id/status
- * @access  Private
+ * @access  Private (Owner, Admin, Member)
  */
 const updateTaskStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -191,7 +204,7 @@ const updateTaskStatus = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Görev bulunamadı.');
   }
 
-  await checkProjectAccess(task.project, req.user._id);
+  await checkProjectAccess(task.project, req.user._id, true);
 
   task.status = status;
   await task.save();
@@ -208,7 +221,7 @@ const updateTaskStatus = asyncHandler(async (req, res) => {
 /**
  * @desc    Görevi ve ekli dosyalarını siler
  * @route   DELETE /api/v1/tasks/:id
- * @access  Private
+ * @access  Private (Owner, Admin veya Görevi Oluşturan)
  */
 const deleteTask = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -218,7 +231,12 @@ const deleteTask = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Görev bulunamadı.');
   }
 
-  await checkProjectAccess(task.project, req.user._id);
+  const { role } = await checkProjectAccess(task.project, req.user._id, true);
+  const isCreator = task.createdBy.toString() === req.user._id.toString();
+
+  if (role !== 'owner' && role !== 'admin' && !isCreator) {
+    throw new ApiError(403, 'Yalnızca proje yöneticileri veya görevi oluşturan kişi silebilir.');
+  }
 
   // Sunucudaki fiziksel dosya eklerini temizle
   if (task.attachments && task.attachments.length > 0) {
@@ -240,7 +258,7 @@ const deleteTask = asyncHandler(async (req, res) => {
 /**
  * @desc    Göreve dosya eki yükler (Multer)
  * @route   POST /api/v1/tasks/:id/attachments
- * @access  Private
+ * @access  Private (Owner, Admin, Member)
  */
 const uploadAttachment = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -251,12 +269,11 @@ const uploadAttachment = asyncHandler(async (req, res) => {
 
   const task = await Task.findById(id);
   if (!task) {
-    // Yüklenen dosyayı geri sil
     fs.unlinkSync(req.file.path);
     throw new ApiError(404, 'Görev bulunamadı.');
   }
 
-  await checkProjectAccess(task.project, req.user._id);
+  await checkProjectAccess(task.project, req.user._id, true);
 
   const newAttachment = {
     originalName: req.file.originalname,
@@ -278,7 +295,7 @@ const uploadAttachment = asyncHandler(async (req, res) => {
 /**
  * @desc    Görevden dosya eki siler
  * @route   DELETE /api/v1/tasks/:id/attachments/:attachmentId
- * @access  Private
+ * @access  Private (Owner, Admin veya Görevi Oluşturan)
  */
 const deleteAttachment = asyncHandler(async (req, res) => {
   const { id, attachmentId } = req.params;
@@ -288,14 +305,18 @@ const deleteAttachment = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Görev bulunamadı.');
   }
 
-  await checkProjectAccess(task.project, req.user._id);
+  const { role } = await checkProjectAccess(task.project, req.user._id, true);
+  const isCreator = task.createdBy.toString() === req.user._id.toString();
+
+  if (role !== 'owner' && role !== 'admin' && !isCreator) {
+    throw new ApiError(403, 'Yalnızca proje yöneticileri veya görevi oluşturan kişi dosya ekini silebilir.');
+  }
 
   const attachment = task.attachments.id(attachmentId);
   if (!attachment) {
     throw new ApiError(404, 'Dosya eki bulunamadı.');
   }
 
-  // Fiziksel dosyayı sunucudan sil
   const filePath = path.join(__dirname, '../../uploads', attachment.filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
