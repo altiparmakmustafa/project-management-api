@@ -17,7 +17,7 @@ const generateToken = (id) => {
  * @access  Public
  */
 const register = asyncHandler(async (req, res) => {
-  const { name, email, password, avatar } = req.body;
+  const { name, email, password, title, avatar } = req.body;
 
   // Kullanıcı zaten var mı?
   const existingUser = await User.findOne({ email });
@@ -30,6 +30,7 @@ const register = asyncHandler(async (req, res) => {
     name,
     email,
     password,
+    title,
     avatar,
   });
 
@@ -59,6 +60,10 @@ const login = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email }).select('+password');
   if (!user) {
     throw new ApiError(401, 'Geçersiz e-posta adresi veya şifre.');
+  }
+
+  if (!user.isActive) {
+    throw new ApiError(403, 'Hesabınız askıya alınmıştır. Lütfen yönetici ile iletişime geçiniz.');
   }
 
   // Şifreyi doğrula
@@ -94,16 +99,16 @@ const getMe = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Kullanıcı profil güncelleme (İsim / Avatar)
+ * @desc    Kullanıcı profil güncelleme (İsim / Unvan / Avatar)
  * @route   PUT /api/v1/auth/me
  * @access  Private
  */
 const updateMe = asyncHandler(async (req, res) => {
-  const { name, avatar } = req.body;
+  const { name, title, avatar } = req.body;
 
   const user = await User.findByIdAndUpdate(
     req.user._id,
-    { name, avatar },
+    { name, title, avatar },
     { new: true, runValidators: true }
   );
 

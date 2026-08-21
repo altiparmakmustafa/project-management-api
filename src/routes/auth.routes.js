@@ -24,16 +24,27 @@ const registerRules = [
     .trim()
     .notEmpty()
     .withMessage('İsim alanı zorunludur')
-    .isLength({ max: 50 })
-    .withMessage('İsim en fazla 50 karakter olabilir'),
+    .isLength({ max: 100 })
+    .withMessage('İsim en fazla 100 karakter olabilir'),
   body('email')
     .trim()
     .isEmail()
     .withMessage('Geçerli bir e-posta adresi giriniz')
     .normalizeEmail(),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Şifre en az 6 karakter olmalıdır'),
+    .isLength({ min: 8 })
+    .withMessage('Şifre en az 8 karakter uzunluğunda olmalıdır')
+    .matches(/[A-Z]/)
+    .withMessage('Şifre en az bir büyük harf içermelidir')
+    .matches(/[a-z]/)
+    .withMessage('Şifre en az bir küçük harf içermelidir')
+    .matches(/[0-9]/)
+    .withMessage('Şifre en az bir rakam içermelidir'),
+  body('title')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Unvan en fazla 100 karakter olabilir'),
   body('avatar')
     .optional()
     .isString()
@@ -55,8 +66,13 @@ const updateMeRules = [
   body('name')
     .optional()
     .trim()
-    .isLength({ max: 50 })
-    .withMessage('İsim en fazla 50 karakter olabilir'),
+    .isLength({ max: 100 })
+    .withMessage('İsim en fazla 100 karakter olabilir'),
+  body('title')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Unvan en fazla 100 karakter olabilir'),
   body('avatar')
     .optional()
     .isString()
@@ -68,6 +84,7 @@ const updateMeRules = [
  * /auth/register:
  *   post:
  *     summary: Yeni kullanıcı kaydı oluşturur
+ *     description: Şifre en az 8 karakter olmalı, en az bir büyük harf, bir küçük harf ve bir rakam içermelidir.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -85,10 +102,13 @@ const updateMeRules = [
  *                 example: Mustafa Altıparmak
  *               email:
  *                 type: string
- *                 example: mustafa@example.com
+ *                 example: mustafa.dev@example.com
  *               password:
  *                 type: string
- *                 example: 123456
+ *                 example: Sifre12345
+ *               title:
+ *                 type: string
+ *                 example: Full Stack Developer
  *               avatar:
  *                 type: string
  *                 example: https://avatar.iran.liara.run/public
@@ -126,10 +146,10 @@ router.post('/register', registerRules, validate, register);
  *             properties:
  *               email:
  *                 type: string
- *                 example: mustafa@example.com
+ *                 example: mustafa.dev@example.com
  *               password:
  *                 type: string
- *                 example: 123456
+ *                 example: Sifre12345
  *     responses:
  *       200:
  *         description: Giriş başarılı
@@ -179,6 +199,9 @@ router.get('/me', protect, getMe);
  *               name:
  *                 type: string
  *                 example: Mustafa Altıparmak Güncel
+ *               title:
+ *                 type: string
+ *                 example: Lead Developer
  *               avatar:
  *                 type: string
  *                 example: https://avatar.iran.liara.run/public/boy

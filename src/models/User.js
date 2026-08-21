@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Lütfen isim ve soyisim giriniz'],
       trim: true,
-      maxlength: [50, 'İsim en fazla 50 karakter olabilir'],
+      maxlength: [100, 'İsim en fazla 100 karakter olabilir'],
     },
     email: {
       type: String,
@@ -23,8 +23,14 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Lütfen bir şifre belirleyiniz'],
-      minlength: [6, 'Şifre en az 6 karakter olmalıdır'],
+      minlength: [8, 'Şifre en az 8 karakter olmalıdır'],
       select: false,
+    },
+    title: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [100, 'Unvan en fazla 100 karakter olabilir'],
     },
     avatar: {
       type: String,
@@ -34,6 +40,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['user', 'admin'],
       default: 'user',
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   {
