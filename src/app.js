@@ -12,7 +12,12 @@ const ApiError = require('./utils/apiError');
 const app = express();
 
 // Güvenlik ve Yardımcı Middleware'ler
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: false,
+  })
+);
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
