@@ -117,9 +117,49 @@ const updateMe = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * @desc    Kullanıcının şifresini günceller
+ * @route   PUT /api/v1/auth/update-password
+ * @access  Private
+ */
+const updatePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  const user = await User.findById(req.user._id).select('+password');
+  if (!user) {
+    throw new ApiError(404, 'Kullanıcı bulunamadı.');
+  }
+
+  // Mevcut şifreyi kontrol et
+  const isMatch = await user.comparePassword(currentPassword);
+  if (!isMatch) {
+    throw new ApiError(401, 'Mevcut şifreniz hatalı.');
+  }
+
+  // Yeni şifre eskisiyle aynı mı?
+  if (currentPassword === newPassword) {
+    throw new ApiError(400, 'Yeni şifreniz mevcut şifrenizle aynı olamaz.');
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  // Yeni token üret
+  const token = generateToken(user._id);
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      { token },
+      'Şifreniz başarıyla güncellendi'
+    )
+  );
+});
+
 module.exports = {
   register,
   login,
   getMe,
   updateMe,
+  updatePassword,
 };

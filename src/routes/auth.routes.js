@@ -5,6 +5,7 @@ const {
   login,
   getMe,
   updateMe,
+  updatePassword,
 } = require('../controllers/auth.controller');
 const { protect } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
@@ -77,6 +78,21 @@ const updateMeRules = [
     .optional()
     .isString()
     .withMessage('Avatar geçerli bir URL veya dosya yolu olmalıdır'),
+];
+
+const updatePasswordRules = [
+  body('currentPassword')
+    .notEmpty()
+    .withMessage('Mevcut şifre alanı zorunludur'),
+  body('newPassword')
+    .isLength({ min: 8 })
+    .withMessage('Yeni şifre en az 8 karakter uzunluğunda olmalıdır')
+    .matches(/[A-Z]/)
+    .withMessage('Yeni şifre en az bir büyük harf içermelidir')
+    .matches(/[a-z]/)
+    .withMessage('Yeni şifre en az bir küçük harf içermelidir')
+    .matches(/[0-9]/)
+    .withMessage('Yeni şifre en az bir rakam içermelidir'),
 ];
 
 /**
@@ -212,5 +228,46 @@ router.get('/me', protect, getMe);
  *         description: Yetkisiz erişim
  */
 router.put('/me', protect, updateMeRules, validate, updateMe);
+
+/**
+ * @swagger
+ * /auth/update-password:
+ *   put:
+ *     summary: Kullanıcının şifresini günceller
+ *     description: Mevcut şifreyi doğrular ve yeni güçlü şifreyi kaydeder.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 example: Password123
+ *               newPassword:
+ *                 type: string
+ *                 example: NewSecretPassword99
+ *     responses:
+ *       200:
+ *         description: Şifre başarıyla güncellendi
+ *       400:
+ *         description: Geçersiz şifre formatı veya eski şifre ile aynı
+ *       401:
+ *         description: Mevcut şifre hatalı veya geçersiz token
+ */
+router.put(
+  '/update-password',
+  protect,
+  updatePasswordRules,
+  validate,
+  updatePassword
+);
 
 module.exports = router;
