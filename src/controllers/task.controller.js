@@ -5,6 +5,14 @@ const Project = require('../models/Project');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
+const {
+  emitTaskCreated,
+  emitTaskUpdated,
+  emitTaskStatusChanged,
+  emitTaskDeleted,
+  emitAttachmentAdded,
+} = require('../services/socket.service');
+const { sendTaskAssignmentEmail } = require('../services/email.service');
 
 // Yardımcı: Kullanıcının projedeki rolünü bulur ve yetkisini doğrular
 const checkProjectAccess = async (projectId, userId, requireWriteAccess = false) => {
@@ -74,6 +82,19 @@ const createTask = asyncHandler(async (req, res) => {
   await task.populate('assignee', 'name email avatar title');
   await task.populate('createdBy', 'name email avatar title');
   await task.populate('project', 'title color');
+
+  // 1. Socket.io Event Yayını
+  emitTaskCreated(projectId, task, req.user);
+
+  // 2. Nodemailer E-posta Bildirimi (Eğer göreve biri atandıysa)
+  if (task.assignee) {
+    sendTaskAssignmentEmail({
+      assignee: task.assignee,
+      task,
+      project,
+      assigner: req.user,
+    });
+  }
 
   res.status(201).json(
     new ApiResponse(201, task, 'Görev başarıyla oluşturuldu')
@@ -154,6 +175,8 @@ const updateTask = asyncHandler(async (req, res) => {
 
   const { project } = await checkProjectAccess(task.project, req.user._id, true);
 
+  const previousAssignee = task.assignee ? task.assignee.toString() : null;
+
   if (assignee !== undefined) {
     if (assignee) {
       const isAssigneeMember =
@@ -181,6 +204,20 @@ const updateTask = asyncHandler(async (req, res) => {
   await task.populate('createdBy', 'name email avatar title');
   await task.populate('project', 'title color');
 
+  // 1. Socket.io Event Yayını
+  const projectId = task.project._id ? task.project._id.toString() : task.project.toString();
+  emitTaskUpdated(projectId, task, req.user);
+
+  // 2. Yeni bir kişiye atandıysa E-posta Gönder
+  if (task.assignee && task.assignee._id.toString() !== previousAssignee) {
+    sendTaskAssignmentEmail({
+      assignee: task.assignee,
+      task,
+      project,
+      assigner: req.user,
+    });
+  }
+
   res.status(200).json(
     new ApiResponse(200, task, 'Görev başarıyla güncellendi')
   );
@@ -206,12 +243,17 @@ const updateTaskStatus = asyncHandler(async (req, res) => {
 
   await checkProjectAccess(task.project, req.user._id, true);
 
+  const oldStatus = task.status;
   task.status = status;
   await task.save();
 
   await task.populate('assignee', 'name email avatar title');
   await task.populate('createdBy', 'name email avatar title');
   await task.populate('project', 'title color');
+
+  // Socket.io Event Yayını: task:status_changed
+  const projectId = task.project._id ? task.project._id.toString() : task.project.toString();
+  emitTaskStatusChanged(projectId, task, oldStatus, status, req.user);
 
   res.status(200).json(
     new ApiResponse(200, task, `Görev durumu '${status}' olarak güncellendi`)
@@ -238,6 +280,8 @@ const deleteTask = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Yalnızca proje yöneticileri veya görevi oluşturan kişi silebilir.');
   }
 
+  const projectId = task.project.toString();
+
   // Sunucudaki fiziksel dosya eklerini temizle
   if (task.attachments && task.attachments.length > 0) {
     task.attachments.forEach((att) => {
@@ -249,6 +293,9 @@ const deleteTask = asyncHandler(async (req, res) => {
   }
 
   await task.deleteOne();
+
+  // Socket.io Event Yayını: task:deleted
+  emitTaskDeleted(projectId, id, req.user);
 
   res.status(200).json(
     new ApiResponse(200, null, 'Görev başarıyla silindi')
@@ -286,6 +333,10 @@ const uploadAttachment = asyncHandler(async (req, res) => {
 
   task.attachments.push(newAttachment);
   await task.save();
+
+  // Socket.io Event Yayını: attachment:added
+  const projectId = task.project._id ? task.project._id.toString() : task.project.toString();
+  emitAttachmentAdded(projectId, id, newAttachment, req.user);
 
   res.status(201).json(
     new ApiResponse(201, task, 'Dosya eki başarıyla yüklendi')

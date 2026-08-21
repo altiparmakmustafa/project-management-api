@@ -36,10 +36,16 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/', (req, res) => {
   res.json({
     message: 'Trello Benzeri Görev & Proje Yönetim API',
-    docs: '/api-docs',
+    docs: '/api-docs/',
+    realtimeTest: '/realtime-test',
     health: '/api/v1/health',
     version: '1.0.0',
   });
+});
+
+// Canlı Socket.io Test Arayüzü
+app.get('/realtime-test', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views/realtime-test.html'));
 });
 
 // API v1 Rotaları

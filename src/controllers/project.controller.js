@@ -4,6 +4,7 @@ const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
+const { emitMemberAdded } = require('../services/socket.service');
 
 // Yardımcı: Kullanıcının projedeki rolünü bulur ('owner' | 'admin' | 'member' | 'viewer' | null)
 const getUserProjectRole = (project, userId) => {
@@ -216,6 +217,22 @@ const addMember = asyncHandler(async (req, res) => {
   await project.save();
   await project.populate('owner', 'name email avatar title');
   await project.populate('members.user', 'name email avatar title');
+
+  // Socket.io Event Yayını: member:added
+  emitMemberAdded(
+    id,
+    {
+      user: {
+        _id: userToAdd._id,
+        name: userToAdd.name,
+        email: userToAdd.email,
+        title: userToAdd.title,
+        avatar: userToAdd.avatar,
+      },
+      role: role || 'member',
+    },
+    req.user
+  );
 
   res.status(200).json(
     new ApiResponse(
