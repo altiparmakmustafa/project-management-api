@@ -268,14 +268,14 @@
         </div>
 
         <button id="connectBtn" class="btn" onclick="connectAndJoin()">
-          🚀 Bağlan ve Odaya Katıl
+          🚀 Proje Panosuna Bağlan
         </button>
       </div>
 
       <!-- Canlı Olay Akışı -->
       <div class="card">
         <div class="card-title" style="justify-content: space-between;">
-          <span>🔔 Canlı Olay Akışı (<span id="eventCount">0</span>)</span>
+          <span>🔔 Canlı Bildirim Akışı (<span id="eventCount">0</span>)</span>
           <button onclick="clearEvents()" style="background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; text-decoration: underline;">Temizle</button>
         </div>
 
@@ -285,7 +285,7 @@
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
             </svg>
-            <p>Henüz bir olay gerçekleşmedi.<br>Proje odasına katılın ve Swagger üzerinden görev ekleyin veya durumunu değiştirin.</p>
+            <p>Henüz bir olay gerçekleşmedi.<br>Panoya bağlanın ve Swagger üzerinden görev ekleyin veya durumunu değiştirin.</p>
           </div>
         </div>
       </div>
@@ -301,7 +301,7 @@
       const projectId = document.getElementById('projectIdInput').value.trim();
 
       if (!projectId) {
-        alert('Lütfen dinlemek istediğiniz Proje ID değerini giriniz.');
+        alert('Lütfen bağlanmak istediğiniz Proje ID değerini giriniz.');
         return;
       }
 
@@ -326,7 +326,7 @@
       });
 
       socket.on('joined:project', (data) => {
-        statusText.textContent = `🟢 project:${data.projectId} Odası Dinleniyor`;
+        statusText.textContent = `🟢 Canlı Takip Aktif (Proje: ${data.projectId.slice(-6)})`;
       });
 
       socket.on('disconnect', () => {
