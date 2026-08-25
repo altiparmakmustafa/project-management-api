@@ -161,16 +161,16 @@ Sunucu başladığında şu adresler aktif olacaktır:
 ```env
 PORT=5001
 NODE_ENV=development
-MONGO_URI=mongodb+srv://<username>:<password>@cluster0.qghfzhj.mongodb.net/task_manager?retryWrites=true&w=majority
-JWT_SECRET=super_secret_jwt_key_987654321_trello_app
+MONGO_URI=mongodb+srv://<username>:<password>@cluster0.*****.mongodb.net/task_manager?retryWrites=true&w=majority
+JWT_SECRET=********************************
 JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:3000
 
 # İsteğe Bağlı: Özel SMTP Ayarları (Tanımlanmazsa otomatik Ethereal Test SMTP kullanılır)
 # SMTP_HOST=smtp.mailtrap.io
 # SMTP_PORT=2525
-# SMTP_USER=your_user
-# SMTP_PASS=your_pass
+# SMTP_USER=********
+# SMTP_PASS=********
 ```
 
 ---
