@@ -161,16 +161,16 @@ Sunucu başladığında şu adresler aktif olacaktır:
 ```env
 PORT=5001
 NODE_ENV=development
-MONGO_URI=mongodb+srv://<username>:<password>@cluster0.*****.mongodb.net/task_manager?retryWrites=true&w=majority
-JWT_SECRET=********************************
+MONGO_URI=mongodb+srv://<username>:<password>@<your-cluster>.mongodb.net/task_manager?retryWrites=true&w=majority
+JWT_SECRET=your_super_secret_jwt_key_here
 JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:3000
 
 # İsteğe Bağlı: Özel SMTP Ayarları (Tanımlanmazsa otomatik Ethereal Test SMTP kullanılır)
 # SMTP_HOST=smtp.mailtrap.io
 # SMTP_PORT=2525
-# SMTP_USER=********
-# SMTP_PASS=********
+# SMTP_USER=your_smtp_user
+# SMTP_PASS=your_smtp_password
 ```
 
 ---
@@ -250,7 +250,7 @@ CLIENT_URL=http://localhost:3000
 * Bir görev oluşturulurken veya güncellenirken bir üyeye atandığında (`assignee`), Nodemailer otomatik olarak devreye girer.
 * Geliştirme ortamında test mailleri **Ethereal Email** servisine iletilir ve terminal konsoluna anında tıklanabilir önizleme URL'i yazdırılır:
   ```text
-  [Nodemailer] ✉️ Görev atama e-postası gönderildi: mustafa.test@example.com
+  [Nodemailer] ✉️ Görev atama e-postası gönderildi: user@example.com
   [Nodemailer] 🔗 Ethereal E-posta Önizleme URL'i: https://ethereal.email/message/...
   ```
 
