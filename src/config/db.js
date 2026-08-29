@@ -1,4 +1,12 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// macOS / yerel ağ DNS SRV çözümleme sorunlarını önlemek için güvenilir DNS sunucuları tanımlanır
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+} catch (e) {
+  // Varsayılan sistem DNS sunucusu kullanılır
+}
 
 const connectDB = async () => {
   try {
